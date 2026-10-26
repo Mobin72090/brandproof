@@ -204,19 +204,37 @@ This script exercises the complete end-to-end lifecycle across the live backend 
 
 ## 7. Public Deployment Instructions
 
-### Backend (FastAPI on Render / Railway / Fly.io)
-1. **Container / Procfile:** Add a `Procfile` containing:
-   ```
-   web: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
-   ```
-2. **Environment Variables:** Set `ENVIRONMENT=production`, `CORS_ORIGINS=https://your-frontend.vercel.app`, and optional `GEMINI_API_KEY`.
-3. **Database:** SQLite works out of the box with persistent volume mounts, or point `DATABASE_PATH` to a mounted volume path.
+### Backend Deployment (FastAPI on Render / Railway / Fly.io)
+The repository includes a ready-to-use [`requirements.txt`](file:///C:/Projects/brandproof/requirements.txt) and [`Procfile`](file:///C:/Projects/brandproof/Procfile).
 
-### Frontend (React + Vite on Vercel / Netlify / Cloudflare Pages)
-1. **Root Directory:** `frontend/`
-2. **Build Command:** `npm run build`
-3. **Output Directory:** `dist`
-4. **Environment Variables:** `VITE_API_BASE_URL=https://your-backend-api.onrender.com`
+1. **Deploy Repository:**
+   - Link your GitHub repository to your hosting service (e.g. Render Web Service or Railway Project).
+   - **Root Directory:** `./`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}`
+2. **Environment Variables:**
+   - `ENVIRONMENT=production`
+   - `CORS_ORIGINS=https://your-frontend-domain.vercel.app` *(replace with your public frontend URL)*
+   - `DATABASE_PATH=brandproof.db` *(or `/data/brandproof.db` if attaching a persistent volume)*
+   - `GEMINI_API_KEY=` *(optional; leave blank to run 100% in deterministic mode without external API dependency)*
+   - `GEMINI_MODEL=gemini-2.5-flash`
+3. **Storage Note (Ephemeral vs Persistent):**
+   - On free-tier containers without a mounted volume, SQLite is ephemeral (data resets to the auto-seeded demo brand whenever the container spins down).
+   - For permanent persistence across container restarts, attach a persistent volume (e.g. `/data`) on Render/Railway and set `DATABASE_PATH=/data/brandproof.db`.
+4. **Verification:**
+   - Open `https://your-backend-api.onrender.com/health` in your browser. It should return `{"status": "healthy", "database": "sqlite_connected"}`.
+
+### Frontend Deployment (React + Vite on Vercel / Netlify / Cloudflare Pages)
+1. **Deploy Repository:**
+   - Link your GitHub repository to Vercel or Netlify.
+   - **Root Directory:** `frontend`
+   - **Framework Preset:** Vite
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+2. **Environment Variables:**
+   - `VITE_API_BASE_URL=https://your-backend-api.onrender.com` *(replace with your public backend URL)*
+3. **Verification:**
+   - Open the resulting public URL (e.g. `https://your-frontend-domain.vercel.app`). The header will show "API Active" with a green pulse dot.
 
 ---
 
@@ -243,10 +261,11 @@ This script exercises the complete end-to-end lifecycle across the live backend 
 - `React 18`, `Vite 6`, `Lucide React`.
 - `Google Gemini API` (`gemini-2.5-flash`).
 
-### Current Limitations
-- Single-organization local workspace (multi-tenant organization auth with SSO/SAML is earmarked for production).
-- Rule pattern matching currently operates on individual marketing drafts rather than full multi-page PDF document sets.
-- Reviewer roles are labeled locally (role-based access control with cryptographic signatures is planned for enterprise tiers).
+### Current Limitations & Security Disclosures
+- **Local Role Labels Only (No Authentication):** Reviewer names and roles entered during review state transitions are informational form labels for workflow tracking and history logging. They do **not** represent authenticated user identities or cryptographic signatures. Authentication (OAuth2/OIDC, SAML SSO, RBAC) is an enterprise requirement planned for production.
+- **Local Deployment Status:** The application is currently configured and running in a local environment (`http://localhost:5173` and `http://127.0.0.1:8000`). Public hosting on Render/Railway and Vercel/Netlify requires setting up cloud providers and public URLs as outlined in Section 7.
+- **Single-Tenant Workspace:** Designed as a single-organization governance studio for evaluation; multi-tenant tenancy isolation is planned for enterprise production.
+- **Text Draft Scope:** Governs structured and unstructured text marketing drafts (blogs, social copy, PRs, email campaigns); binary PDF/image parsing is planned for Round 3.
 
 ### Disclosures
 - Built with AI assistance (Google Gemini model in pair programming mode).

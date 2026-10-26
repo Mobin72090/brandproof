@@ -1,6 +1,7 @@
 // API Client for BrandProof FastAPI Backend
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const rawBase = (import.meta.env.VITE_API_BASE_URL || '').trim();
+const API_BASE = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;

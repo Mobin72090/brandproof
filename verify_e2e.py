@@ -19,11 +19,17 @@ def test_full_e2e_flow():
     assert len(rules) >= 5
     assert len(facts) >= 3
 
-    # 3. Drafts
-    drafts = client.get('/api/drafts').json()
-    assert len(drafts) > 0
-    draft_id = drafts[0]['id']
-    print(f'[3] Drafts count: {len(drafts)} | Draft #1: "{drafts[0]["title"]}" (Status: {drafts[0]["review_status"]})')
+    # 3. Create isolated test draft for verification (preserves demo drafts intact)
+    test_draft = client.post('/api/drafts', json={
+        'brand_id': brand_id,
+        'title': 'E2E Automated Verification Test Draft',
+        'channel': 'Press Release',
+        'author': 'QA Automated Auditor',
+        'original_text': 'Since Aethercloud was founded in 2018, our CloudMesh engine provides 100% guaranteed zero downtime. Our platform is completely risk-free and cheapest in the world. With military-grade 128-bit encryption, we drive incredible synergy.'
+    }).json()
+    draft_id = test_draft['id']
+    draft_title = test_draft["title"]
+    print(f'[3] Created isolated E2E test draft #{draft_id}: "{draft_title}"')
 
     # 4. Audit
     analysis = client.post(f'/api/drafts/{draft_id}/analyze?run_ai=false').json()
