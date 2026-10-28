@@ -23,6 +23,7 @@ from backend.models import (
     ReviewTransitionRequest,
     ReviewHistoryResponse,
     AnalysisRunResponse,
+    BrandTrustReportResponse,
 )
 import backend.crud as crud
 from backend.rules_engine import analyze_draft_with_rules
@@ -53,6 +54,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins or ["*"],
+    allow_origin_regex=r"^https:\/\/.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -240,6 +242,19 @@ def get_findings(draft_id: int):
     if not draft:
         raise HTTPException(status_code=404, detail=f"Content draft #{draft_id} not found")
     return crud.get_draft_findings(draft_id)
+
+@app.get("/api/drafts/{draft_id}/trust-report", response_model=BrandTrustReportResponse, tags=["Analysis"])
+def get_draft_trust_report(draft_id: int):
+    """
+    Computes and returns the Brand Trust Report summarizing the selected draft's
+    governance state: severity breakdown, category issues, resolved corrections,
+    approval blockers, and transparent publication readiness.
+    """
+    report = crud.generate_brand_trust_report(draft_id)
+    if not report:
+        raise HTTPException(status_code=404, detail=f"Content draft #{draft_id} not found")
+    return report
+
 
 # ----------------- CORRECTION ACTIONS -----------------
 

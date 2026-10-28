@@ -179,6 +179,47 @@ export default function DashboardView({
         </div>
       </div>
 
+      {/* Product Architecture & Purpose Summary */}
+      <div style={{
+        background: 'rgba(99, 102, 241, 0.04)',
+        border: '1px solid rgba(99, 102, 241, 0.2)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '18px 24px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        gap: '20px'
+      }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8', flexShrink: 0 }}>
+            <CheckCircle2 size={18} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#f8fafc', marginBottom: '2px' }}>Deterministic & AI Guard</div>
+            <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.4' }}>Instant regex matching for legal SLAs and product casing, paired with optional Gemini AI for tone subtleties.</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399', flexShrink: 0 }}>
+            <ShieldCheck size={18} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#f8fafc', marginBottom: '2px' }}>Brand Trust Report</div>
+            <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.4' }}>Computes transparent publication-readiness and approval blockers from real persisted SQLite findings.</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', flexShrink: 0 }}>
+            <Award size={18} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#f8fafc', marginBottom: '2px' }}>Human-in-the-Loop Sign-Off</div>
+            <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.4' }}>Authors accept or customize suggestions with one-click replacements. Approval is strictly blocked until critical findings are resolved.</div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Sections: Recent Drafts & Governance Rules */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
         {/* Recent Drafts Section */}

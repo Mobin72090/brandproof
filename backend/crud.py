@@ -394,4 +394,135 @@ def apply_finding_action(
         finding["status"] = new_status
         finding["user_applied_text"] = applied_text
 
-        return True, f"Correction successfully {new_status}ed into draft content", finding, draft
+        action_label = "accepted" if new_status == "accepted" else ("edited" if new_status == "edited" else new_status)
+        return True, f"Correction successfully {action_label} into draft content", finding, draft
+
+# ----------------- BRAND TRUST REPORT -----------------
+
+def generate_brand_trust_report(draft_id: int) -> Optional[Dict[str, Any]]:
+    from datetime import datetime, timezone
+
+    draft = get_content_draft(draft_id)
+    if not draft:
+        return None
+
+    findings = get_draft_findings(draft_id)
+
+    unresolved_by_sev = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    unresolved_by_cat = {
+        "terminology": 0,
+        "voice_and_tone": 0,
+        "fact_conflicts": 0,
+        "prohibited_claims": 0,
+    }
+    resolved_summary = {
+        "accepted": 0,
+        "edited": 0,
+        "dismissed": 0,
+        "total_resolved": 0,
+    }
+
+    evidence_refs = []
+    open_findings = []
+
+    for f in findings:
+        status = f.get("status", "open")
+        sev = str(f.get("severity", "medium")).lower()
+        rtype = str(f.get("rule_type", "voice")).lower()
+
+        if status == "open":
+            open_findings.append(f)
+            if sev in unresolved_by_sev:
+                unresolved_by_sev[sev] += 1
+
+            if rtype in ("terminology", "preferred_wording"):
+                unresolved_by_cat["terminology"] += 1
+            elif rtype == "voice":
+                unresolved_by_cat["voice_and_tone"] += 1
+            elif rtype == "fact":
+                unresolved_by_cat["fact_conflicts"] += 1
+            elif rtype == "prohibited_claim":
+                unresolved_by_cat["prohibited_claims"] += 1
+
+            evidence_refs.append({
+                "id": f["id"],
+                "title": f["title"],
+                "rule_type": f["rule_type"],
+                "severity": f["severity"],
+                "matched_text": f.get("matched_text"),
+                "explanation": f["explanation"],
+                "evidence": f["evidence"],
+                "suggested_correction": f.get("suggested_correction"),
+                "status": status,
+            })
+        elif status == "accepted":
+            resolved_summary["accepted"] += 1
+        elif status == "edited":
+            resolved_summary["edited"] += 1
+        elif status == "rejected":
+            resolved_summary["dismissed"] += 1
+
+    resolved_summary["total_resolved"] = (
+        resolved_summary["accepted"] +
+        resolved_summary["edited"] +
+        resolved_summary["dismissed"]
+    )
+
+    total_unresolved = len(open_findings)
+    critical_count = unresolved_by_sev["critical"]
+    review_status = draft.get("review_status", "Draft")
+
+    blockers = []
+    if critical_count > 0:
+        blockers.append(
+            f"{critical_count} unresolved critical finding(s) detected. Must be resolved before publication approval."
+        )
+
+    if review_status == "Draft":
+        blockers.append("Content is currently in 'Draft' state. Must be submitted for human review.")
+    elif review_status == "Changes Requested":
+        blockers.append("Reviewer has requested changes. Revisions must be submitted for re-review.")
+    elif review_status == "Rejected":
+        blockers.append("Draft was rejected by compliance reviewer. Reopen as draft to revise.")
+
+    # Determine transparent publication-readiness status
+    if review_status == "Approved":
+        readiness = "Approved for Publication"
+        is_blocked = False
+    elif critical_count > 0:
+        readiness = "Blocked — Critical Issues Present"
+        is_blocked = True
+    elif review_status == "In Review" and critical_count == 0:
+        readiness = "Ready for Human Approval"
+        is_blocked = False
+    elif review_status == "Changes Requested":
+        readiness = "Action Required — Changes Requested"
+        is_blocked = True
+    elif review_status == "Rejected":
+        readiness = "Rejected by Reviewer"
+        is_blocked = True
+    else:  # Draft
+        readiness = "Draft — Ready for Review Submission"
+        is_blocked = True
+
+    now_str = datetime.now(timezone.utc).isoformat()
+
+    return {
+        "draft_id": draft_id,
+        "draft_title": draft["title"],
+        "review_status": review_status,
+        "publication_readiness": readiness,
+        "is_approval_blocked": is_blocked,
+        "blockers": blockers,
+        "unresolved_by_severity": unresolved_by_sev,
+        "total_unresolved": total_unresolved,
+        "unresolved_by_category": unresolved_by_cat,
+        "resolved_summary": resolved_summary,
+        "evidence_references": evidence_refs,
+        "calculation_basis": (
+            "Computed deterministically from persisted SQLite findings and verified governance rules. "
+            "A draft with 1 or more unresolved critical findings is mathematically blocked from publication approval."
+        ),
+        "generated_at": now_str,
+    }
+

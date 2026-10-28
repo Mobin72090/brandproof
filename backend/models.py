@@ -1,4 +1,4 @@
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Any, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -131,3 +131,20 @@ class AnalysisRunResponse(BaseModel):
     facts_checked: int
     ai_assisted_used: bool
     ai_status_message: Optional[str] = None
+
+# --- Brand Trust Report Model ---
+class BrandTrustReportResponse(BaseModel):
+    draft_id: int
+    draft_title: str
+    review_status: ReviewStatusType
+    publication_readiness: str
+    is_approval_blocked: bool
+    blockers: List[str]
+    unresolved_by_severity: dict[str, int]
+    total_unresolved: int
+    unresolved_by_category: dict[str, int]
+    resolved_summary: dict[str, int]
+    evidence_references: List[dict[str, Any]]
+    calculation_basis: str
+    generated_at: str
+

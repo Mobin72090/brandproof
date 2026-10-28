@@ -82,10 +82,18 @@ def test_full_e2e_flow():
     ).json()
     print('[9] Approved successfully after resolving findings:', t2['message'])
 
-    # 10. History check
+    # 10. History check & Trust Report Verification
     history = client.get(f'/api/drafts/{draft_id}/review-history').json()
     print(f'[10] Review history trail has {len(history)} entries. Final status: {history[-1]["to_status"]}')
     assert history[-1]['to_status'] == 'Approved'
+
+    trust_report = client.get(f'/api/drafts/{draft_id}/trust-report').json()
+    print(f'[10.1] Brand Trust Report: readiness="{trust_report["publication_readiness"]}", blockers={len(trust_report["blockers"])}, total_resolved={trust_report["resolved_summary"]["total_resolved"]}')
+    assert trust_report['publication_readiness'] == 'Approved for Publication'
+    assert trust_report['is_approval_blocked'] is False
+    assert len(trust_report['blockers']) == 0
+    assert trust_report['total_unresolved'] == 0
+    assert trust_report['resolved_summary']['total_resolved'] > 0
 
     # 11. Test Frontend Dev Server HTML
     frontend_res = httpx.get('http://localhost:5173')

@@ -3,7 +3,8 @@ from backend.crud import (
     create_brand_rule,
     create_brand_fact,
     create_content_draft,
-    list_brand_profiles
+    list_brand_profiles,
+    list_content_drafts
 )
 from backend.models import (
     BrandProfileCreate,
@@ -12,10 +13,62 @@ from backend.models import (
     ContentDraftCreate
 )
 
+def _ensure_showcase_drafts(brand_id: int):
+    existing_drafts = list_content_drafts(brand_id)
+    existing_titles = {d["title"] for d in existing_drafts}
+
+    showcase_drafts = [
+        ContentDraftCreate(
+            brand_id=brand_id,
+            title="AetherCloud Enterprise Architecture Overview",
+            channel="Technical Whitepaper",
+            author="Elena Rostova (Principal Solutions Architect)",
+            original_text="""AetherCloud delivers zero-trust orchestration for modern enterprise workloads. Founded in 2021 and headquartered in Austin, Texas, our infrastructure provides a 99.95% uptime SLA backed by AES-256-GCM encryption. Built on the AetherMesh Fabric, teams achieve seamless interoperability and provable compliance without sacrificing delivery velocity."""
+        ),
+        ContentDraftCreate(
+            brand_id=brand_id,
+            title="AetherCloud Product Release Notes — Terminology Demo",
+            channel="Blog Post",
+            author="David Chen (Marketing Lead)",
+            original_text="""We are excited to share new updates for Aethercloud customers! Our engineering team has integrated Brandproof governance directly into the CloudMesh engine to help distributed teams collaborate faster across hybrid environments."""
+        ),
+        ContentDraftCreate(
+            brand_id=brand_id,
+            title="Q4 Promotional Campaign — Claims & Compliance Demo",
+            channel="Landing Page & Social",
+            author="Alex Morgan (Growth Marketer)",
+            original_text="""AetherCloud is the cheapest in the world and provides 100% guaranteed zero downtime for enterprise clusters. Unlike legacy vendors, our security architecture is completely risk-free and offers game-changer synergy across all environments."""
+        ),
+        ContentDraftCreate(
+            brand_id=brand_id,
+            title="Corporate Trust & Fact Verification Briefing",
+            channel="Press Release",
+            author="Marcus Vance (Senior Evangelist)",
+            original_text="""Since AetherCloud was founded in 2018, we have protected tier-1 banking infrastructure with military-grade 128-bit encryption and a 100% uptime guarantee for all enterprise customers."""
+        ),
+        ContentDraftCreate(
+            brand_id=brand_id,
+            title="Q4 Product Launch Announcement & Whitepaper Summary",
+            channel="Press Release & Blog",
+            author="Sarah Lin (Product Marketing Lead)",
+            original_text="""We are thrilled to unveil our latest security innovation! Since Aethercloud was founded in 2018, our mission has been to disrupt the industry with revolutionary technology.
+
+Our new CloudMesh orchestration engine provides 100% guaranteed zero downtime for mission-critical Kubernetes workloads. Unlike competitors, our platform is completely risk-free and the cheapest in the world.
+
+With military-grade 128-bit encryption, your data is completely protected. This release represents tremendous synergy across our infrastructure stack, and our engineers are confident that this release is a true game-changer for DevOps teams worldwide."""
+        ),
+    ]
+
+    for d in showcase_drafts:
+        if d.title not in existing_titles:
+            create_content_draft(d)
+
 def seed_demo_data_if_empty():
     existing = list_brand_profiles()
     if existing:
-        return existing[0]["id"]
+        brand_id = existing[0]["id"]
+        _ensure_showcase_drafts(brand_id)
+        return brand_id
 
     # 1. Create Demo Brand Profile: "AetherCloud"
     profile_data = BrandProfileCreate(
@@ -156,18 +209,8 @@ def seed_demo_data_if_empty():
     for f in facts:
         create_brand_fact(f)
 
-    # 4. Create Sample Marketing Draft with Seeded Violations
-    sample_draft = ContentDraftCreate(
-        brand_id=brand_id,
-        title="Q4 Product Launch Announcement & Whitepaper Summary",
-        channel="Press Release & Blog",
-        author="Sarah Lin (Product Marketing Lead)",
-        original_text="""We are thrilled to unveil our latest security innovation! Since Aethercloud was founded in 2018, our mission has been to disrupt the industry with revolutionary technology.
-
-Our new CloudMesh orchestration engine provides 100% guaranteed zero downtime for mission-critical Kubernetes workloads. Unlike competitors, our platform is completely risk-free and the cheapest in the world.
-
-With military-grade 128-bit encryption, your data is completely protected. This release represents tremendous synergy across our infrastructure stack, and our engineers are confident that this release is a true game-changer for DevOps teams worldwide."""
-    )
-    create_content_draft(sample_draft)
+    # 4. Create Demonstration Showcase Drafts (Phase 4 Requirement)
+    _ensure_showcase_drafts(brand_id)
 
     return brand_id
+

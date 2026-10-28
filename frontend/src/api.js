@@ -67,6 +67,7 @@ export const api = {
   analyzeDraft: (draftId, runAi = true) =>
     request(`/api/drafts/${draftId}/analyze?run_ai=${runAi}`, { method: 'POST' }),
   getFindings: (draftId) => request(`/api/drafts/${draftId}/findings`),
+  getTrustReport: (draftId) => request(`/api/drafts/${draftId}/trust-report`),
 
   // Correction Action (Accept / Reject / Edit)
   applyFindingAction: (findingId, action, customCorrection = null) =>

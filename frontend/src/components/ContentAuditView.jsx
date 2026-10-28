@@ -15,8 +15,10 @@ import {
   X,
   History,
   Layers,
-  Info
+  Info,
+  ShieldCheck
 } from 'lucide-react';
+import BrandTrustReport from './BrandTrustReport';
 
 export default function ContentAuditView({
   draft,
@@ -38,6 +40,7 @@ export default function ContentAuditView({
   const [customCorrectionText, setCustomCorrectionText] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [includeAi, setIncludeAi] = useState(true);
+  const [studioTab, setStudioTab] = useState('inspector'); // 'inspector' or 'report'
 
   // Sync draft text whenever selected draft changes
   useEffect(() => {
@@ -359,25 +362,28 @@ export default function ContentAuditView({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Governance Inspector & Findings */}
+        {/* RIGHT COLUMN: Governance Inspector & Brand Trust Report */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', minHeight: '520px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-            <div>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                Governance Inspector
-                {findings.length > 0 && (
-                  <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.2)', color: '#c7d2fe' }}>
-                    {openFindings.length} Open
-                  </span>
-                )}
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Review rule violations, factual conflicts, and suggested corrections.
-              </p>
+          {/* Top Switcher Tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className={`btn btn-sm ${studioTab === 'inspector' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setStudioTab('inspector')}
+              >
+                <Layers size={14} />
+                <span>Governance Inspector ({openFindings.length})</span>
+              </button>
+              <button
+                className={`btn btn-sm ${studioTab === 'report' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setStudioTab('report')}
+              >
+                <ShieldCheck size={14} />
+                <span>Brand Trust Report</span>
+              </button>
             </div>
 
-            {/* Severity Filter Tabs */}
-            {findings.length > 0 && (
+            {studioTab === 'inspector' && findings.length > 0 && (
               <div style={{ display: 'flex', gap: '4px' }}>
                 {['all', 'critical', 'high', 'medium', 'low'].map(sev => (
                   <button
@@ -402,20 +408,28 @@ export default function ContentAuditView({
             )}
           </div>
 
-          {/* Findings List */}
-          {findings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-              <CheckCircle2 size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-              <p style={{ fontWeight: 500, color: '#94a3b8' }}>No findings to display.</p>
-              <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-                Click <strong>"Run Governance Audit"</strong> below the editor to check this draft against approved brand voice, terminology, facts, and prohibited claims.
-              </p>
-            </div>
-          ) : filteredFindings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-              <p>No findings matching severity: <strong>{filterSeverity}</strong></p>
-            </div>
+          {studioTab === 'report' ? (
+            <BrandTrustReport
+              draftId={draft.id}
+              findingsCount={findings.length}
+              onRefreshTrigger={draft.updated_at}
+            />
           ) : (
+            <>
+              {/* Findings List */}
+              {findings.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+                  <CheckCircle2 size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+                  <p style={{ fontWeight: 500, color: '#94a3b8' }}>No findings to display.</p>
+                  <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                    Click <strong>"Run Governance Audit"</strong> below the editor to check this draft against approved brand voice, terminology, facts, and prohibited claims.
+                  </p>
+                </div>
+              ) : filteredFindings.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                  <p>No findings matching severity: <strong>{filterSeverity}</strong></p>
+                </div>
+              ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '600px', overflowY: 'auto', paddingRight: '4px' }}>
               {filteredFindings.map((finding) => {
                 const isEditing = editingFindingId === finding.id;
@@ -596,6 +610,8 @@ export default function ContentAuditView({
                 );
               })}
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

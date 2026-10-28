@@ -281,3 +281,66 @@ def test_prevent_approval_with_unresolved_critical_finding():
     )
     assert approve_attempt.status_code == 400
     assert "unresolved critical finding" in approve_attempt.json()["detail"].lower()
+
+def test_brand_trust_report_calculation_and_approval_readiness():
+    brands = client.get("/api/brands").json()
+    brand_id = brands[0]["id"]
+
+    # 1. Create a draft with a critical prohibited claim and casing error
+    draft_payload = {
+        "brand_id": brand_id,
+        "title": "Trust Report Test Draft",
+        "channel": "Press Release",
+        "author": "Governance Tester",
+        "original_text": "Aethercloud provides 100% guaranteed zero downtime with CloudMesh."
+    }
+    draft = client.post("/api/drafts", json=draft_payload).json()
+    draft_id = draft["id"]
+
+    # 2. Audit draft
+    client.post(f"/api/drafts/{draft_id}/analyze?run_ai=false")
+
+    # 3. Retrieve Trust Report in initial state (critical issues present)
+    report_res = client.get(f"/api/drafts/{draft_id}/trust-report")
+    assert report_res.status_code == 200
+    report = report_res.json()
+
+    assert report["draft_id"] == draft_id
+    assert report["unresolved_by_severity"]["critical"] >= 2  # CloudMesh & 100% zero downtime
+    assert report["total_unresolved"] >= 3
+    assert report["is_approval_blocked"] is True
+    assert "Blocked" in report["publication_readiness"]
+    assert len(report["blockers"]) >= 1
+    assert "critical finding" in report["blockers"][0].lower()
+    assert len(report["evidence_references"]) >= 3
+    assert "persisted sqlite findings" in report["calculation_basis"].lower()
+
+    # 4. Resolve findings via corrections
+    findings = client.get(f"/api/drafts/{draft_id}/findings").json()
+    for f in findings:
+        client.post(f"/api/findings/{f['id']}/action", json={"action": "accept" if f.get("suggested_correction") else "reject"})
+
+    # 5. Transition to In Review
+    client.post(
+        f"/api/drafts/{draft_id}/review-transition",
+        json={"to_status": "In Review", "reviewer_name": "QA Lead"}
+    )
+
+    # 6. Check updated Trust Report: critical count should be 0, ready for approval!
+    report_after = client.get(f"/api/drafts/{draft_id}/trust-report").json()
+    assert report_after["unresolved_by_severity"]["critical"] == 0
+    assert report_after["total_unresolved"] == 0
+    assert report_after["resolved_summary"]["total_resolved"] >= 3
+    assert report_after["is_approval_blocked"] is False
+    assert report_after["publication_readiness"] == "Ready for Human Approval"
+
+    # 7. Approve draft and verify final report state
+    client.post(
+        f"/api/drafts/{draft_id}/review-transition",
+        json={"to_status": "Approved", "reviewer_name": "Compliance Officer", "notes": "Approved with zero blockers"}
+    )
+    final_report = client.get(f"/api/drafts/{draft_id}/trust-report").json()
+    assert final_report["review_status"] == "Approved"
+    assert final_report["publication_readiness"] == "Approved for Publication"
+    assert final_report["is_approval_blocked"] is False
+
