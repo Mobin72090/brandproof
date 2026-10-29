@@ -23,7 +23,7 @@ export default function ReviewNotesModal({
       await onSubmit(draftId, targetStatus, reviewerName.trim(), notes.trim() || null);
       setNotes('');
       onClose();
-    } catch (err) {
+    } catch {
       // Handled by toast
     } finally {
       setIsSubmitting(false);
@@ -31,16 +31,18 @@ export default function ReviewNotesModal({
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-notes-title">
       <div className="modal-content">
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MessageSquare size={20} style={{ color: '#818cf8' }} />
-            <h3 className="modal-title">Transition to "{targetStatus}"</h3>
+            <MessageSquare size={20} style={{ color: 'var(--primary)' }} />
+            <h3 id="modal-notes-title" className="modal-title">Transition to "{targetStatus}"</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            aria-label="Close dialog"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '4px' }}
           >
             <X size={18} />
           </button>
@@ -48,7 +50,7 @@ export default function ReviewNotesModal({
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Reviewer Name *</label>
+            <label className="form-label">Reviewer Name & Title *</label>
             <input
               type="text"
               className="form-input"
@@ -78,7 +80,7 @@ export default function ReviewNotesModal({
               className={`btn ${targetStatus === 'Rejected' ? 'btn-danger' : 'btn-primary'}`}
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Updating...' : `Confirm ${targetStatus}`}
+              {isSubmitting ? 'Submitting...' : `Confirm ${targetStatus}`}
             </button>
           </div>
         </form>

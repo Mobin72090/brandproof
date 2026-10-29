@@ -20,7 +20,7 @@ async function request(endpoint, options = {}) {
       try {
         const errJson = await res.json();
         errorMsg = errJson.detail || errJson.message || errorMsg;
-      } catch (e) {
+      } catch {
         // fallback
       }
       throw new Error(errorMsg);

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
 import DashboardView from './components/DashboardView';
 import ContentAuditView from './components/ContentAuditView';
 import BrandGuidelinesView from './components/BrandGuidelinesView';
 import AuditHistoryView from './components/AuditHistoryView';
+import NotFoundView from './components/NotFoundView';
 import NewDraftModal from './components/NewDraftModal';
 import NewRuleModal from './components/NewRuleModal';
 import NewFactModal from './components/NewFactModal';
@@ -12,9 +14,41 @@ import ReviewNotesModal from './components/ReviewNotesModal';
 import { api } from './api';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
+const VALID_VIEWS = ['dashboard', 'audit', 'guidelines', 'history'];
+
+const VIEW_METADATA = {
+  dashboard: {
+    title: 'Dashboard | BrandProof — Intelligent Brand Governance',
+    description: 'Executive overview of active marketing drafts, deterministic brand governance rules, and verified facts.'
+  },
+  audit: {
+    title: 'Content Review Studio | BrandProof',
+    description: 'Interactive pre-publication marketing draft editor with brand voice rules, terminology checks, and Brand Trust Reports.'
+  },
+  guidelines: {
+    title: 'Brand Rules & Facts | BrandProof',
+    description: 'Centralized repository of approved brand terminology, tone attributes, legal SLA claims, and verified facts.'
+  },
+  history: {
+    title: 'Audit & Review Log | BrandProof',
+    description: 'Chronological audit trail of editorial status transitions, reviewer feedback notes, and publication sign-offs.'
+  },
+  '404': {
+    title: '404 Page Not Found | BrandProof',
+    description: 'The requested section does not exist within the BrandProof governance suite.'
+  }
+};
+
 export default function App() {
-  // Navigation
-  const [activeView, setActiveView] = useState('dashboard');
+  // Navigation & Routing state
+  const getInitialView = () => {
+    const hash = window.location.hash.replace(/^#\/?/, '').trim().toLowerCase();
+    if (!hash) return 'dashboard';
+    return VALID_VIEWS.includes(hash) ? hash : '404';
+  };
+
+  const [activeView, setActiveView] = useState(getInitialView);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Core Data
   const [systemInfo, setSystemInfo] = useState(null);
@@ -29,7 +63,6 @@ export default function App() {
   const [reviewHistory, setReviewHistory] = useState([]);
 
   // Loading States
-  const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
 
@@ -37,7 +70,7 @@ export default function App() {
   const [isNewDraftOpen, setIsNewDraftOpen] = useState(false);
   const [isNewRuleOpen, setIsNewRuleOpen] = useState(false);
   const [isNewFactOpen, setIsNewFactOpen] = useState(false);
-  const [notesModalData, setNotesModalData] = useState(null); // { draftId, targetStatus }
+  const [notesModalData, setNotesModalData] = useState(null);
 
   // Toasts
   const [toasts, setToasts] = useState([]);
@@ -54,32 +87,77 @@ export default function App() {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // 1. Initial Load
-  const fetchInitialData = async () => {
-    try {
-      setIsLoading(true);
-      const [info, healthData, brandsData] = await Promise.all([
-        api.getAppInfo().catch(() => null),
-        api.getHealth().catch(() => null),
-        api.getBrands().catch(() => [])
-      ]);
-
-      setSystemInfo(info);
-      setHealth(healthData);
-      setBrands(brandsData);
-
-      if (brandsData.length > 0) {
-        setSelectedBrand(brandsData[0]);
-      }
-    } catch (err) {
-      addToast('error', `Failed to initialize: ${err.message}`);
-    } finally {
-      setIsLoading(false);
+  // URL Hash Routing synchronization
+  const handleNavigate = (view) => {
+    if (VALID_VIEWS.includes(view)) {
+      window.location.hash = `#/${view}`;
+      setActiveView(view);
+    } else {
+      window.location.hash = `#/404`;
+      setActiveView('404');
     }
+    setIsMobileMenuOpen(false);
   };
 
   useEffect(() => {
-    fetchInitialData();
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace(/^#\/?/, '').trim().toLowerCase();
+      if (!hash) {
+        setActiveView('dashboard');
+      } else if (VALID_VIEWS.includes(hash)) {
+        setActiveView(hash);
+      } else {
+        setActiveView('404');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Update Page Title and Meta Description dynamically
+  useEffect(() => {
+    const meta = VIEW_METADATA[activeView] || VIEW_METADATA['404'];
+    document.title = meta.title;
+
+    let descTag = document.querySelector('meta[name="description"]');
+    if (!descTag) {
+      descTag = document.createElement('meta');
+      descTag.name = 'description';
+      document.head.appendChild(descTag);
+    }
+    descTag.setAttribute('content', meta.description);
+  }, [activeView]);
+
+  useEffect(() => {
+    let ignore = false;
+    async function init() {
+      try {
+        const [info, healthData, brandsData] = await Promise.all([
+          api.getAppInfo().catch(() => null),
+          api.getHealth().catch(() => null),
+          api.getBrands().catch(() => [])
+        ]);
+
+        if (!ignore) {
+          setSystemInfo(info);
+          setHealth(healthData);
+          setBrands(brandsData);
+
+          if (brandsData.length > 0) {
+            setSelectedBrand(brandsData[0]);
+          }
+        }
+      } catch (err) {
+        if (!ignore) {
+          addToast('error', `Failed to initialize: ${err.message}`);
+        }
+      }
+    }
+    init();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // 2. Fetch Brand Specific Data (Rules, Facts, Drafts)
@@ -96,7 +174,6 @@ export default function App() {
       setFacts(factsData);
       setDrafts(draftsData);
 
-      // Select first draft if none selected or if previous selected doesn't belong to this brand
       if (draftsData.length > 0) {
         setSelectedDraft(draftsData[0]);
       } else {
@@ -110,10 +187,43 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (selectedBrand?.id) {
-      fetchBrandData(selectedBrand.id);
+    const brandId = selectedBrand?.id;
+    if (!brandId) return;
+
+    let ignore = false;
+    async function syncBrand() {
+      try {
+        const [rulesData, factsData, draftsData] = await Promise.all([
+          api.getRules(brandId).catch(() => []),
+          api.getFacts(brandId).catch(() => []),
+          api.getDrafts(brandId).catch(() => [])
+        ]);
+
+        if (!ignore) {
+          setRules(rulesData);
+          setFacts(factsData);
+          setDrafts(draftsData);
+
+          if (draftsData.length > 0) {
+            setSelectedDraft(draftsData[0]);
+          } else {
+            setSelectedDraft(null);
+            setFindings([]);
+            setReviewHistory([]);
+          }
+        }
+      } catch (err) {
+        if (!ignore) {
+          addToast('error', `Error loading brand data: ${err.message}`);
+        }
+      }
     }
-  }, [selectedBrand?.id, fetchBrandData]);
+
+    syncBrand();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedBrand?.id]);
 
   // 3. Fetch Draft Specific Data (Findings, History)
   const fetchDraftDetails = useCallback(async (draftId) => {
@@ -135,10 +245,34 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (selectedDraft?.id) {
-      fetchDraftDetails(selectedDraft.id);
+    const draftId = selectedDraft?.id;
+    if (!draftId) {
+      return;
     }
-  }, [selectedDraft?.id, fetchDraftDetails]);
+
+    let ignore = false;
+    async function syncDraft() {
+      try {
+        const [findingsData, historyData] = await Promise.all([
+          api.getFindings(draftId).catch(() => []),
+          api.getReviewHistory(draftId).catch(() => [])
+        ]);
+        if (!ignore) {
+          setFindings(findingsData);
+          setReviewHistory(historyData);
+        }
+      } catch (err) {
+        if (!ignore) {
+          addToast('error', `Error loading draft details: ${err.message}`);
+        }
+      }
+    }
+
+    syncDraft();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedDraft?.id]);
 
   // Handlers
   const handleSelectBrand = (brand) => {
@@ -147,7 +281,7 @@ export default function App() {
 
   const handleSelectDraft = (draft) => {
     setSelectedDraft(draft);
-    setActiveView('audit');
+    handleNavigate('audit');
   };
 
   const handleUpdateDraftText = async (draftId, newText) => {
@@ -183,7 +317,6 @@ export default function App() {
       const res = await api.applyFindingAction(findingId, action, customCorrection);
       addToast('success', res.message);
 
-      // Update draft text and findings locally
       if (res.draft) {
         setSelectedDraft(res.draft);
         setDrafts(prev => prev.map(d => d.id === res.draft.id ? res.draft : d));
@@ -204,7 +337,6 @@ export default function App() {
       if (res.draft) {
         setSelectedDraft(res.draft);
         setDrafts(prev => prev.map(d => d.id === res.draft.id ? res.draft : d));
-        // Refresh history
         fetchDraftDetails(draftId);
       }
     } catch (err) {
@@ -217,7 +349,7 @@ export default function App() {
       const created = await api.createDraft(payload);
       setDrafts(prev => [created, ...prev]);
       setSelectedDraft(created);
-      setActiveView('audit');
+      handleNavigate('audit');
       addToast('success', `Draft "${created.title}" submitted successfully.`);
     } catch (err) {
       addToast('error', `Could not create draft: ${err.message}`);
@@ -291,14 +423,16 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar Navigation */}
+      {/* Sidebar Navigation (with Mobile Drawer support) */}
       <Sidebar
         activeView={activeView}
-        onNavigate={setActiveView}
+        onNavigate={handleNavigate}
         draftsCount={drafts.length}
         rulesCount={rules.length}
         factsCount={facts.length}
         openFindingsCount={openFindingsCount}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -311,9 +445,11 @@ export default function App() {
           onSelectBrand={handleSelectBrand}
           onSeedDemo={handleSeedDemo}
           isSeeding={isSeeding}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          isMobileMenuOpen={isMobileMenuOpen}
         />
 
-        <main className="content-body">
+        <main className="content-body" role="main">
           {activeView === 'dashboard' && (
             <DashboardView
               brand={selectedBrand}
@@ -322,7 +458,7 @@ export default function App() {
               facts={facts}
               onSelectDraft={handleSelectDraft}
               onOpenNewDraftModal={() => setIsNewDraftOpen(true)}
-              onNavigate={setActiveView}
+              onNavigate={handleNavigate}
             />
           )}
 
@@ -359,10 +495,20 @@ export default function App() {
               drafts={drafts}
               reviewHistory={reviewHistory}
               onSelectDraft={handleSelectDraft}
-              onNavigate={setActiveView}
+              onNavigate={handleNavigate}
             />
           )}
+
+          {activeView === '404' && (
+            <NotFoundView onNavigate={handleNavigate} />
+          )}
         </main>
+
+        {/* Global Application Footer */}
+        <Footer
+          onNavigate={handleNavigate}
+          isHealthy={health?.status === 'healthy'}
+        />
       </div>
 
       {/* Modals */}
@@ -398,16 +544,18 @@ export default function App() {
       )}
 
       {/* Floating Toast Notifications */}
-      <div className="toast-container">
+      <div className="toast-container" role="region" aria-label="Notifications" aria-live="polite">
         {toasts.map(toast => (
           <div key={toast.id} className={`toast toast-${toast.type}`}>
-            {toast.type === 'success' && <CheckCircle2 size={16} style={{ color: '#10b981', flexShrink: 0 }} />}
-            {toast.type === 'error' && <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0 }} />}
-            {toast.type === 'info' && <Info size={16} style={{ color: '#3b82f6', flexShrink: 0 }} />}
-            <span style={{ flex: 1 }}>{toast.message}</span>
+            {toast.type === 'success' && <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />}
+            {toast.type === 'error' && <AlertCircle size={16} style={{ color: '#dc2626', flexShrink: 0 }} />}
+            {toast.type === 'info' && <Info size={16} style={{ color: '#2563eb', flexShrink: 0 }} />}
+            <span style={{ flex: 1, fontSize: '0.86rem' }}>{toast.message}</span>
             <button
+              type="button"
               onClick={() => removeToast(toast.id)}
-              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: 0 }}
+              aria-label="Dismiss notification"
             >
               <X size={14} />
             </button>

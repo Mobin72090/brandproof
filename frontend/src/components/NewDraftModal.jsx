@@ -32,24 +32,26 @@ export default function NewDraftModal({
       setAuthor('');
       setOriginalText('');
       onClose();
-    } catch (err) {
-      // Handled by parent toast
+    } catch {
+      // Handled by parent toast, input preserved in state
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-draft-title">
       <div className="modal-content">
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={20} style={{ color: '#818cf8' }} />
-            <h3 className="modal-title">Submit Marketing Draft</h3>
+            <FileText size={20} style={{ color: 'var(--primary)' }} />
+            <h3 id="modal-draft-title" className="modal-title">Submit Marketing Draft</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            aria-label="Close dialog"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '4px' }}
           >
             <X size={18} />
           </button>
@@ -68,9 +70,9 @@ export default function NewDraftModal({
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
             <div className="form-group">
-              <label className="form-label">Marketing Channel</label>
+              <label className="form-label">Channel / Medium</label>
               <select
                 className="form-select"
                 value={channel}
@@ -78,19 +80,19 @@ export default function NewDraftModal({
               >
                 <option value="Blog Post">Blog Post</option>
                 <option value="Press Release">Press Release</option>
-                <option value="LinkedIn Post">LinkedIn Post</option>
+                <option value="Technical Whitepaper">Technical Whitepaper</option>
                 <option value="Landing Page">Landing Page</option>
-                <option value="Email Newsletter">Email Newsletter</option>
-                <option value="Product Documentation">Product Documentation</option>
+                <option value="Social Media Copy">Social Media Copy</option>
+                <option value="Email Campaign">Email Campaign</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Author / Submitter *</label>
+              <label className="form-label">Author Name & Role *</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. Sarah Lin (PMM)"
+                placeholder="e.g. Sarah Lin (Product Marketing Lead)"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 required
@@ -99,11 +101,11 @@ export default function NewDraftModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Draft Content *</label>
+            <label className="form-label">Draft Content / Copy *</label>
             <textarea
               className="form-textarea"
               rows={8}
-              placeholder="Paste or type marketing copy to be audited..."
+              placeholder="Paste or type marketing copy to be audited against brand voice, product terms, and verified facts..."
               value={originalText}
               onChange={(e) => setOriginalText(e.target.value)}
               required
@@ -115,7 +117,7 @@ export default function NewDraftModal({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Create & Review'}
+              {isSubmitting ? 'Submitting...' : 'Submit Draft for Audit'}
             </button>
           </div>
         </form>

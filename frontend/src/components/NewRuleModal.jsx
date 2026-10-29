@@ -42,7 +42,7 @@ export default function NewRuleModal({
       setDescription('');
       setRationale('');
       onClose();
-    } catch (err) {
+    } catch {
       // Handled by toast
     } finally {
       setIsSubmitting(false);
@@ -50,16 +50,18 @@ export default function NewRuleModal({
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-rule-title">
       <div className="modal-content">
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShieldCheck size={20} style={{ color: '#818cf8' }} />
-            <h3 className="modal-title">Add Approved Brand Rule</h3>
+            <ShieldCheck size={20} style={{ color: 'var(--primary)' }} />
+            <h3 id="modal-rule-title" className="modal-title">Add Approved Brand Rule</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            aria-label="Close dialog"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '4px' }}
           >
             <X size={18} />
           </button>
@@ -78,7 +80,7 @@ export default function NewRuleModal({
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
             <div className="form-group">
               <label className="form-label">Rule Type</label>
               <select
@@ -105,17 +107,17 @@ export default function NewRuleModal({
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value)}
               >
-                <option value="critical">Critical (Blocks Approval)</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low / Info</option>
+                <option value="critical">Critical (Blocks Publication Approval)</option>
+                <option value="high">High (Strong Editorial Warning)</option>
+                <option value="medium">Medium (Style Recommendation)</option>
+                <option value="low">Low (Polishing Suggestion)</option>
               </select>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
             <div className="form-group">
-              <label className="form-label">Flagged Term / Pattern</label>
+              <label className="form-label">Flagged Term or Phrase</label>
               <input
                 type="text"
                 className="form-input"
@@ -126,7 +128,7 @@ export default function NewRuleModal({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Preferred Term / Replacement</label>
+              <label className="form-label">Preferred Replacement Term</label>
               <input
                 type="text"
                 className="form-input"
@@ -138,11 +140,11 @@ export default function NewRuleModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Rule Description & Guidance *</label>
+            <label className="form-label">Rule Guidance / Explanation *</label>
             <textarea
               className="form-textarea"
               rows={3}
-              placeholder="Explain what is wrong and how to fix it..."
+              placeholder="Explain why this rule exists and provide clear instructions for writers..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
@@ -150,11 +152,11 @@ export default function NewRuleModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Compliance Rationale / Policy Source</label>
+            <label className="form-label">Legal / Governance Rationale</label>
             <input
               type="text"
               className="form-input"
-              placeholder="e.g. Legal Master Services Agreement standard SLA terms"
+              placeholder="e.g. Master Services Agreement standard uptime commitments"
               value={rationale}
               onChange={(e) => setRationale(e.target.value)}
             />
@@ -165,7 +167,7 @@ export default function NewRuleModal({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Rule'}
+              {isSubmitting ? 'Saving...' : 'Add Brand Rule'}
             </button>
           </div>
         </form>

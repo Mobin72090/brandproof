@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Sparkles,
   ShieldAlert,
@@ -9,13 +9,11 @@ import {
   Send,
   AlertTriangle,
   FileCheck,
-  ChevronRight,
   RotateCcw,
   Check,
   X,
   History,
   Layers,
-  Info,
   ShieldCheck
 } from 'lucide-react';
 import BrandTrustReport from './BrandTrustReport';
@@ -42,21 +40,24 @@ export default function ContentAuditView({
   const [includeAi, setIncludeAi] = useState(true);
   const [studioTab, setStudioTab] = useState('inspector'); // 'inspector' or 'report'
 
-  // Sync draft text whenever selected draft changes
-  useEffect(() => {
-    if (draft) {
-      setCurrentText(draft.current_text || '');
-      setIsDirty(false);
-      setEditingFindingId(null);
-    }
-  }, [draft?.id, draft?.current_text]);
+  // Track previous draft props to safely adjust state when draft switches or server text updates
+  const [prevDraftId, setPrevDraftId] = useState(draft?.id);
+  const [prevDraftText, setPrevDraftText] = useState(draft?.current_text);
+
+  if (draft && (draft.id !== prevDraftId || draft.current_text !== prevDraftText)) {
+    setPrevDraftId(draft.id);
+    setPrevDraftText(draft.current_text);
+    setCurrentText(draft.current_text || '');
+    setIsDirty(false);
+    setEditingFindingId(null);
+  }
 
   if (!draft) {
     return (
-      <div className="card" style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-        <FileCheck size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-        <h3>No Content Draft Selected</h3>
-        <p style={{ marginTop: '8px' }}>Please choose a draft from the dropdown or submit a new draft to review.</p>
+      <div className="card" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-subtle)' }}>
+        <FileCheck size={48} style={{ margin: '0 auto 16px', opacity: 0.5, color: 'var(--primary)' }} />
+        <h3 style={{ color: 'var(--text-main)' }}>No Content Draft Selected</h3>
+        <p style={{ marginTop: '8px', color: 'var(--text-muted)' }}>Please choose a draft from the dropdown or submit a new draft to review.</p>
       </div>
     );
   }
@@ -66,7 +67,6 @@ export default function ContentAuditView({
 
   const openFindings = findings.filter(f => f.status === 'open');
   const criticalOpenCount = openFindings.filter(f => f.severity === 'critical').length;
-  const highOpenCount = openFindings.filter(f => f.severity === 'high').length;
 
   // Filter findings
   const filteredFindings = findings.filter(f => {
@@ -100,10 +100,10 @@ export default function ContentAuditView({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top Bar: Draft Picker & Review State Machine */}
       <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           {/* Draft selector dropdown */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
               Active Draft
             </span>
             <select
@@ -113,16 +113,17 @@ export default function ContentAuditView({
                 if (selected) onSelectDraft(selected);
               }}
               style={{
-                background: 'var(--bg-app)',
-                color: '#fff',
+                background: '#ffffff',
+                color: 'var(--text-main)',
                 border: '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-sm)',
                 padding: '6px 12px',
                 fontWeight: 600,
-                fontSize: '0.9rem',
+                fontSize: '0.88rem',
                 outline: 'none',
                 cursor: 'pointer'
               }}
+              aria-label="Select draft to audit"
             >
               {drafts.map(d => (
                 <option key={d.id} value={d.id}>
@@ -135,11 +136,11 @@ export default function ContentAuditView({
           <div style={{ height: '32px', width: '1px', background: 'var(--border-color)' }} />
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span className={`status-badge ${statusClass}`}>
                 {draft.review_status}
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 Channel: <strong>{draft.channel}</strong> • Author: <strong>{draft.author}</strong>
               </span>
             </div>
@@ -147,9 +148,10 @@ export default function ContentAuditView({
         </div>
 
         {/* Workflow State Transition Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {draft.review_status === 'Draft' && (
             <button
+              type="button"
               className="btn btn-primary btn-sm"
               onClick={() => onTransitionStatus(draft.id, 'In Review')}
               title="Submit draft to human editorial review"
@@ -162,15 +164,17 @@ export default function ContentAuditView({
           {draft.review_status === 'In Review' && (
             <>
               <button
+                type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={() => openReviewNotesModal(draft.id, 'Changes Requested')}
                 title="Send back with change requests"
               >
-                <AlertTriangle size={14} style={{ color: '#fbbf24' }} />
+                <AlertTriangle size={14} style={{ color: '#d97706' }} />
                 <span>Request Changes</span>
               </button>
 
               <button
+                type="button"
                 className="btn btn-success btn-sm"
                 onClick={() => onTransitionStatus(draft.id, 'Approved')}
                 disabled={criticalOpenCount > 0}
@@ -185,6 +189,7 @@ export default function ContentAuditView({
               </button>
 
               <button
+                type="button"
                 className="btn btn-danger btn-sm"
                 onClick={() => openReviewNotesModal(draft.id, 'Rejected')}
                 title="Reject publication"
@@ -197,6 +202,7 @@ export default function ContentAuditView({
 
           {draft.review_status === 'Changes Requested' && (
             <button
+              type="button"
               className="btn btn-primary btn-sm"
               onClick={() => onTransitionStatus(draft.id, 'In Review')}
               title="Re-submit revisions for review"
@@ -208,6 +214,7 @@ export default function ContentAuditView({
 
           {(draft.review_status === 'Approved' || draft.review_status === 'Rejected') && (
             <button
+              type="button"
               className="btn btn-secondary btn-sm"
               onClick={() => onTransitionStatus(draft.id, 'Draft')}
               title="Re-open draft for editing"
@@ -218,7 +225,8 @@ export default function ContentAuditView({
           )}
 
           <button
-            className={`btn btn-secondary btn-sm ${showHistory ? 'btn-outline-primary' : ''}`}
+            type="button"
+            className={`btn btn-secondary btn-sm ${showHistory ? 'btn-primary' : ''}`}
             onClick={() => setShowHistory(!showHistory)}
             title="View review history trail"
           >
@@ -230,25 +238,25 @@ export default function ContentAuditView({
 
       {/* Review History Drawer if toggled */}
       {showHistory && (
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', borderColor: 'rgba(99, 102, 241, 0.3)' }}>
-          <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#c7d2fe', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="card" style={{ background: '#f8fafc', borderColor: 'var(--primary-border)' }}>
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <History size={16} />
             Review State Audit Trail
           </h4>
           {reviewHistory.length === 0 ? (
-            <p style={{ fontSize: '0.8rem', color: '#64748b' }}>No review events recorded yet.</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)' }}>No review events recorded yet.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {reviewHistory.map((h) => (
-                <div key={h.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', padding: '6px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px' }}>
+                <div key={h.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', padding: '8px 12px', background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '6px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
-                    <span style={{ color: '#94a3b8' }}>{h.from_status}</span>
-                    <span style={{ margin: '0 8px', color: '#6366f1' }}>→</span>
-                    <strong style={{ color: '#f8fafc' }}>{h.to_status}</strong>
-                    <span style={{ marginLeft: '12px', color: '#64748b' }}>by {h.changed_by}</span>
-                    {h.notes && <span style={{ marginLeft: '12px', color: '#cbd5e1', fontStyle: 'italic' }}>"{h.notes}"</span>}
+                    <span style={{ color: 'var(--text-subtle)' }}>{h.from_status}</span>
+                    <span style={{ margin: '0 8px', color: 'var(--primary)' }}>→</span>
+                    <strong style={{ color: 'var(--text-main)' }}>{h.to_status}</strong>
+                    <span style={{ marginLeft: '12px', color: 'var(--text-muted)' }}>by {h.changed_by}</span>
+                    {h.notes && <span style={{ marginLeft: '12px', color: 'var(--text-subtle)', fontStyle: 'italic' }}>"{h.notes}"</span>}
                   </div>
-                  <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                  <div style={{ color: 'var(--text-subtle)', fontSize: '0.75rem' }}>
                     {new Date(h.timestamp).toLocaleString()}
                   </div>
                 </div>
@@ -261,17 +269,17 @@ export default function ContentAuditView({
       {/* Warning banner if critical findings exist while In Review */}
       {criticalOpenCount > 0 && draft.review_status === 'In Review' && (
         <div style={{
-          background: 'rgba(239, 68, 68, 0.12)',
-          border: '1px solid rgba(239, 68, 68, 0.35)',
+          background: 'var(--critical-bg)',
+          border: '1px solid var(--critical-border)',
           borderRadius: 'var(--radius-md)',
           padding: '12px 18px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          color: '#fca5a5',
+          color: 'var(--critical)',
           fontSize: '0.88rem'
         }}>
-          <ShieldAlert size={20} style={{ color: '#ef4444', flexShrink: 0 }} />
+          <ShieldAlert size={20} style={{ color: 'var(--critical)', flexShrink: 0 }} />
           <div>
             <strong>Approval Blocked:</strong> {criticalOpenCount} unresolved critical brand compliance finding(s) detected.
             You must accept, edit, or reject all critical findings before this draft can be approved.
@@ -280,30 +288,32 @@ export default function ContentAuditView({
       )}
 
       {/* Main Two-Column Workspace */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', alignItems: 'start' }}>
         {/* LEFT COLUMN: Content Editor */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', fontWeight: 600 }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-main)' }}>
                 Marketing Copy Editor
               </h3>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 Edit directly or apply corrections from the Governance Inspector.
               </p>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
                 {wordCount} words • {charCount} chars
               </span>
               <button
+                type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleSaveText}
                 disabled={!isDirty}
                 style={{
                   borderColor: isDirty ? 'var(--primary)' : 'var(--border-color)',
-                  color: isDirty ? '#c7d2fe' : 'var(--text-muted)'
+                  color: isDirty ? 'var(--primary)' : 'var(--text-muted)',
+                  fontWeight: isDirty ? 600 : 500
                 }}
               >
                 <Save size={13} />
@@ -317,16 +327,18 @@ export default function ContentAuditView({
             className="form-textarea"
             value={currentText}
             onChange={handleTextChange}
-            rows={18}
+            rows={16}
             placeholder="Enter marketing draft content here..."
             style={{
               fontFamily: 'var(--font-sans)',
               fontSize: '0.92rem',
               lineHeight: '1.65',
               padding: '16px',
-              minHeight: '400px',
-              backgroundColor: '#0c1222',
-              borderRadius: 'var(--radius-md)'
+              minHeight: '380px',
+              backgroundColor: '#ffffff',
+              color: 'var(--text-main)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-color)'
             }}
           />
 
@@ -336,9 +348,11 @@ export default function ContentAuditView({
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingTop: '12px',
-            borderTop: '1px solid var(--border-color)'
+            borderTop: '1px solid var(--border-color)',
+            flexWrap: 'wrap',
+            gap: '12px'
           }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: '#cbd5e1' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-main)' }}>
               <input
                 type="checkbox"
                 checked={includeAi}
@@ -346,12 +360,13 @@ export default function ContentAuditView({
                 style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
               />
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Sparkles size={13} style={{ color: '#818cf8' }} />
+                <Sparkles size={13} style={{ color: 'var(--primary)' }} />
                 Enable Gemini AI Tone & Nuance Audit
               </span>
             </label>
 
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => onRunAudit(draft.id, includeAi)}
               disabled={isAnalyzing}
@@ -368,6 +383,7 @@ export default function ContentAuditView({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
+                type="button"
                 className={`btn btn-sm ${studioTab === 'inspector' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setStudioTab('inspector')}
               >
@@ -375,6 +391,7 @@ export default function ContentAuditView({
                 <span>Governance Inspector ({openFindings.length})</span>
               </button>
               <button
+                type="button"
                 className={`btn btn-sm ${studioTab === 'report' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setStudioTab('report')}
               >
@@ -384,19 +401,21 @@ export default function ContentAuditView({
             </div>
 
             {studioTab === 'inspector' && findings.length > 0 && (
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {['all', 'critical', 'high', 'medium', 'low'].map(sev => (
                   <button
+                    type="button"
                     key={sev}
                     onClick={() => setFilterSeverity(sev)}
                     style={{
-                      background: filterSeverity === sev ? 'var(--bg-elevated)' : 'transparent',
+                      background: filterSeverity === sev ? 'var(--primary-light)' : 'transparent',
                       border: '1px solid',
-                      borderColor: filterSeverity === sev ? 'rgba(99, 102, 241, 0.4)' : 'transparent',
+                      borderColor: filterSeverity === sev ? 'var(--primary-border)' : 'transparent',
                       borderRadius: 'var(--radius-sm)',
                       padding: '2px 8px',
                       fontSize: '0.72rem',
-                      color: filterSeverity === sev ? '#fff' : '#94a3b8',
+                      fontWeight: filterSeverity === sev ? 600 : 500,
+                      color: filterSeverity === sev ? 'var(--primary)' : 'var(--text-subtle)',
                       cursor: 'pointer',
                       textTransform: 'capitalize'
                     }}
@@ -418,15 +437,15 @@ export default function ContentAuditView({
             <>
               {/* Findings List */}
               {findings.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-                  <CheckCircle2 size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                  <p style={{ fontWeight: 500, color: '#94a3b8' }}>No findings to display.</p>
-                  <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-subtle)' }}>
+                  <CheckCircle2 size={40} style={{ margin: '0 auto 12px', opacity: 0.4, color: '#16a34a' }} />
+                  <p style={{ fontWeight: 600, color: 'var(--text-main)' }}>No findings to display.</p>
+                  <p style={{ fontSize: '0.8rem', marginTop: '4px', color: 'var(--text-muted)' }}>
                     Click <strong>"Run Governance Audit"</strong> below the editor to check this draft against approved brand voice, terminology, facts, and prohibited claims.
                   </p>
                 </div>
               ) : filteredFindings.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-subtle)' }}>
                   <p>No findings matching severity: <strong>{filterSeverity}</strong></p>
                 </div>
               ) : (
@@ -439,36 +458,38 @@ export default function ContentAuditView({
                   <div
                     key={finding.id}
                     style={{
-                      background: isResolved ? 'rgba(255, 255, 255, 0.015)' : 'rgba(255, 255, 255, 0.03)',
+                      background: isResolved ? '#f8fafc' : '#ffffff',
                       border: '1px solid',
                       borderColor: isResolved
-                        ? 'rgba(255, 255, 255, 0.06)'
+                        ? 'var(--border-color)'
                         : finding.severity === 'critical'
-                        ? 'rgba(239, 68, 68, 0.4)'
+                        ? 'var(--critical-border)'
                         : finding.severity === 'high'
-                        ? 'rgba(249, 115, 22, 0.4)'
-                        : 'rgba(255, 255, 255, 0.1)',
+                        ? 'var(--high-border)'
+                        : 'var(--border-color)',
                       borderRadius: 'var(--radius-md)',
                       padding: '16px',
-                      opacity: isResolved ? 0.65 : 1,
-                      transition: 'all 0.15s ease'
+                      opacity: isResolved ? 0.75 : 1,
+                      transition: 'all 0.15s ease',
+                      boxShadow: 'var(--shadow-sm)'
                     }}
                   >
                     {/* Header: Severity, Rule Type, and Source */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span className={`badge badge-${finding.severity}`}>
                           {finding.severity}
                         </span>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: 500 }}>
                           {finding.rule_type}
                         </span>
                         <span style={{
                           fontSize: '0.7rem',
-                          color: finding.finding_source === 'ai_assisted' ? '#c7d2fe' : '#93c5fd',
+                          color: finding.finding_source === 'ai_assisted' ? 'var(--primary)' : 'var(--text-subtle)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '3px'
+                          gap: '3px',
+                          fontWeight: 500
                         }}>
                           {finding.finding_source === 'ai_assisted' ? (
                             <><Sparkles size={11} /> AI Auditor</>
@@ -485,8 +506,8 @@ export default function ContentAuditView({
                           fontWeight: 600,
                           padding: '2px 8px',
                           borderRadius: '9999px',
-                          background: finding.status === 'accepted' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                          color: finding.status === 'accepted' ? '#34d399' : '#94a3b8'
+                          background: finding.status === 'accepted' ? '#dcfce7' : '#f1f5f9',
+                          color: finding.status === 'accepted' ? '#16a34a' : 'var(--text-subtle)'
                         }}>
                           {finding.status.toUpperCase()}
                         </span>
@@ -494,20 +515,20 @@ export default function ContentAuditView({
                     </div>
 
                     {/* Title */}
-                    <div style={{ fontWeight: 600, fontSize: '0.92rem', color: '#f8fafc', marginBottom: '6px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)', marginBottom: '6px' }}>
                       {finding.title}
                     </div>
 
                     {/* Matched text snippet */}
                     {finding.matched_text && (
                       <div style={{
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        borderLeft: `3px solid ${finding.severity === 'critical' ? '#ef4444' : '#f97316'}`,
+                        background: '#fef2f2',
+                        borderLeft: `3px solid ${finding.severity === 'critical' ? 'var(--critical)' : '#ea580c'}`,
                         padding: '6px 10px',
                         borderRadius: '0 4px 4px 0',
                         fontSize: '0.82rem',
                         fontFamily: 'var(--font-mono)',
-                        color: '#fca5a5',
+                        color: 'var(--critical)',
                         marginBottom: '8px',
                         wordBreak: 'break-word'
                       }}>
@@ -516,26 +537,26 @@ export default function ContentAuditView({
                     )}
 
                     {/* Explanation */}
-                    <p style={{ fontSize: '0.82rem', color: '#cbd5e1', lineHeight: '1.45', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.45', marginBottom: '8px' }}>
                       {finding.explanation}
                     </p>
 
                     {/* Evidence citation */}
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontWeight: 600, color: '#64748b' }}>EVIDENCE:</span>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>EVIDENCE:</span>
                       <span>{finding.evidence}</span>
                     </div>
 
                     {/* Suggested Correction Box & Actions */}
                     {finding.suggested_correction && (
                       <div style={{
-                        background: 'rgba(99, 102, 241, 0.08)',
-                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                        background: '#eff6ff',
+                        border: '1px solid var(--primary-border)',
                         borderRadius: 'var(--radius-sm)',
                         padding: '10px 12px',
                         marginBottom: '12px'
                       }}>
-                        <div style={{ fontSize: '0.72rem', color: '#818cf8', fontWeight: 600, marginBottom: '4px', textTransform: 'uppercase' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 600, marginBottom: '4px', textTransform: 'uppercase' }}>
                           Suggested Correction:
                         </div>
 
@@ -550,12 +571,14 @@ export default function ContentAuditView({
                             />
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                               <button
+                                type="button"
                                 className="btn btn-secondary btn-sm"
                                 onClick={() => setEditingFindingId(null)}
                               >
                                 Cancel
                               </button>
                               <button
+                                type="button"
                                 className="btn btn-primary btn-sm"
                                 onClick={() => handleSaveCustomCorrection(finding.id)}
                               >
@@ -564,7 +587,7 @@ export default function ContentAuditView({
                             </div>
                           </div>
                         ) : (
-                          <div style={{ fontSize: '0.85rem', color: '#e0e7ff', fontWeight: 500 }}>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>
                             {finding.suggested_correction}
                           </div>
                         )}
@@ -573,8 +596,9 @@ export default function ContentAuditView({
 
                     {/* Action buttons (only if open) */}
                     {finding.status === 'open' && !isEditing && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', paddingTop: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', paddingTop: '6px', flexWrap: 'wrap' }}>
                         <button
+                          type="button"
                           className="btn btn-secondary btn-sm"
                           onClick={() => onApplyCorrection(finding.id, 'reject')}
                           title="Dismiss finding without modifying draft"
@@ -586,6 +610,7 @@ export default function ContentAuditView({
                         {finding.suggested_correction && (
                           <>
                             <button
+                              type="button"
                               className="btn btn-secondary btn-sm"
                               onClick={() => handleStartEditCorrection(finding)}
                               title="Customize correction text before applying"
@@ -595,6 +620,7 @@ export default function ContentAuditView({
                             </button>
 
                             <button
+                              type="button"
                               className="btn btn-success btn-sm"
                               onClick={() => onApplyCorrection(finding.id, 'accept')}
                               title="Replace text in draft content automatically"

@@ -33,7 +33,7 @@ export default function NewFactModal({
       setVerifiedValue('');
       setEvidenceSource('');
       onClose();
-    } catch (err) {
+    } catch {
       // Handled by toast
     } finally {
       setIsSubmitting(false);
@@ -41,23 +41,25 @@ export default function NewFactModal({
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-fact-title">
       <div className="modal-content">
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CheckCircle size={20} style={{ color: '#34d399' }} />
-            <h3 className="modal-title">Add Verified Brand Fact</h3>
+            <CheckCircle size={20} style={{ color: '#16a34a' }} />
+            <h3 id="modal-fact-title" className="modal-title">Add Verified Brand Fact</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            aria-label="Close dialog"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '4px' }}
           >
             <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
             <div className="form-group">
               <label className="form-label">Fact Key Identifier *</label>
               <input
@@ -88,7 +90,7 @@ export default function NewFactModal({
             <textarea
               className="form-textarea"
               rows={3}
-              placeholder="e.g. AetherCloud was founded in 2021 by a team of systems engineers."
+              placeholder="e.g. AetherCloud was founded in 2021 by a team of distributed systems engineers."
               value={factStatement}
               onChange={(e) => setFactStatement(e.target.value)}
               required
@@ -100,7 +102,7 @@ export default function NewFactModal({
             <input
               type="text"
               className="form-input"
-              placeholder="e.g. Certificate of Incorporation #639201"
+              placeholder="e.g. Delaware Certificate of Incorporation #639201"
               value={evidenceSource}
               onChange={(e) => setEvidenceSource(e.target.value)}
             />
@@ -111,7 +113,7 @@ export default function NewFactModal({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Verified Fact'}
+              {isSubmitting ? 'Saving...' : 'Add Verified Fact'}
             </button>
           </div>
         </form>
